@@ -84,6 +84,9 @@ builder.Host.UseSerilog((ctx, LoggerConfiguration) =>
 
 builder.Services.AddAutoMapper(typeof(MapperConfig));
 
+builder.Services.AddOptions();
+builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Administration"));
+
 builder.Services.AddAuthManagerService();
 
 var app = builder.Build();

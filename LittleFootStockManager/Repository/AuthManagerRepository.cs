@@ -4,6 +4,7 @@ using LittleFootStockManager.Contract;
 using LittleFootStockManager.Data.Model;
 using LittleFootStockManager.Dto.User;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -18,14 +19,18 @@ namespace LittleFootStockManager.Repository
         private readonly ILogger<AuthManagerRepository> _logger;
         private readonly SignInManager<Users> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly IOptions<AdminOptions> _adminOption;
 
-        public AuthManagerRepository(IMapper mapper, UserManager<Users> userManager, ILogger<AuthManagerRepository> logger, SignInManager<Users> signInManager, IConfiguration configuration)
+        public AuthManagerRepository(IMapper mapper, UserManager<Users> userManager, ILogger<AuthManagerRepository> logger, SignInManager<Users> signInManager, 
+            IConfiguration configuration, IOptions<AdminOptions> adminOption
+            )
         {
             this._mapper = mapper;
             this._userManager = userManager;
             this._logger = logger;
             this._signInManager = signInManager;
             this._configuration = configuration;
+            this._adminOption = adminOption;
         }
 
         public async Task<IEnumerable<IdentityError>> Register(UserDto userDto)
@@ -34,7 +39,15 @@ namespace LittleFootStockManager.Repository
             user.UserName = userDto.Email;
             
             var result = await _userManager.CreateAsync(user, userDto.Password);
-            
+            if(result.Succeeded)
+            {
+                if (userDto.Email == _adminOption.Value.AdminEmail)
+                {
+                    await _userManager.AddToRoleAsync(user, "Admin");
+                    return result.Errors;
+                }
+            }
+
             return result.Errors;
         }
         public async Task<AuthReponseDto> Login(LoginDto loginDto)
