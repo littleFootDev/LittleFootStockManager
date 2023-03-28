@@ -1,4 +1,8 @@
+using LittleFootStockManager.Configuration;
 using LittleFootStockManager.Data;
+using LittleFootStockManager.Data.Model;
+using LittleFootStockManager.Endpoint;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -15,6 +19,13 @@ builder.Services.AddDbContext<LittleFootStockManagerDbContext>(options =>
     options.UseSqlServer(connectionString);
 });
 
+builder.Services.AddIdentity<Users, IdentityRole>()
+    .AddEntityFrameworkStores<LittleFootStockManagerDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.AddAuthentication();
+builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", b =>
@@ -29,6 +40,10 @@ builder.Host.UseSerilog((ctx, LoggerConfiguration) =>
     LoggerConfiguration.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration);
 });
 
+builder.Services.AddAutoMapper(typeof(MapperConfig));
+
+builder.Services.AddAuthManagerService();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -40,5 +55,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGroup("/auth").MapAuthManagerEndpoint();
 app.Run();
 
