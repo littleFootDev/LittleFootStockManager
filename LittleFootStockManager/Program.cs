@@ -2,9 +2,13 @@ using LittleFootStockManager.Configuration;
 using LittleFootStockManager.Data;
 using LittleFootStockManager.Data.Model;
 using LittleFootStockManager.Endpoint;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Security.Cryptography;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,8 +26,33 @@ builder.Services.AddDbContext<LittleFootStockManagerDbContext>(options =>
 builder.Services.AddIdentity<Users, IdentityRole>()
     .AddEntityFrameworkStores<LittleFootStockManagerDbContext>()
     .AddDefaultTokenProviders();
+RSA _rsa = RSA.Create();
+if (!File.Exists("Key.bin"))
+{
+    var key = _rsa.ExportRSAPrivateKey();
+    File.WriteAllBytes("key.bin", key);
+}
+_rsa.ImportRSAPrivateKey(File.ReadAllBytes("key.bin"), out var _);
 
-builder.Services.AddAuthentication();
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        IssuerSigningKey = new RsaSecurityKey(_rsa)
+    };
+});
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>

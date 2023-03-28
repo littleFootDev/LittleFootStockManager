@@ -1,8 +1,13 @@
 ﻿using AutoMapper;
+using LittleFootStockManager.Configuration;
 using LittleFootStockManager.Contract;
 using LittleFootStockManager.Data.Model;
 using LittleFootStockManager.Dto.User;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace LittleFootStockManager.Repository
 {
@@ -12,13 +17,15 @@ namespace LittleFootStockManager.Repository
         private readonly UserManager<Users> _userManager;
         private readonly ILogger<AuthManagerRepository> _logger;
         private readonly SignInManager<Users> _signInManager;
+        private readonly IConfiguration _configuration;
 
-        public AuthManagerRepository(IMapper mapper, UserManager<Users> userManager, ILogger<AuthManagerRepository> logger, SignInManager<Users> signInManager)
+        public AuthManagerRepository(IMapper mapper, UserManager<Users> userManager, ILogger<AuthManagerRepository> logger, SignInManager<Users> signInManager, IConfiguration configuration)
         {
             this._mapper = mapper;
             this._userManager = userManager;
             this._logger = logger;
             this._signInManager = signInManager;
+            this._configuration = configuration;
         }
 
         public async Task<IEnumerable<IdentityError>> Register(UserDto userDto)
@@ -37,10 +44,12 @@ namespace LittleFootStockManager.Repository
             if (result.Succeeded)
             {
                 var user = await _userManager.FindByEmailAsync(loginDto.Email);
+                var token = await GenerateAccessTokenAsync(user);
                 return new AuthReponseDto
                 {
                     IsAuthenticated = true,
-                    UserId = user.Id
+                    UserId = user.Id,
+                    Token = token,
                 };
             }
 
@@ -50,6 +59,39 @@ namespace LittleFootStockManager.Repository
                 ErrorMessage = "Invalid username or password"
             };
                 
+        }
+
+        private async Task<string> GenerateAccessTokenAsync(Users user)
+        {
+            RSA _rsa = RSA.Create();
+            _rsa.ImportRSAPrivateKey(File.ReadAllBytes("key.bin"), out var _);
+
+            var securityKey = new RsaSecurityKey(_rsa);
+            var credential = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256);
+            
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleClaims = roles.Select(x => new Claim(ClaimTypes.Role, x)).ToList();
+            var userClaims = await _userManager.GetClaimsAsync(user);
+
+            var claims = new List<Claim>
+            {
+               new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+               new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim("uid", user.Id),
+            }
+            .Union(userClaims).Union(roleClaims);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JwtSettings:Issuer"],
+                audience: _configuration["JwtSettings:Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(Convert.ToInt32(_configuration["JwtSettings:DurationInMinutes"])),
+                signingCredentials: credential
+                );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+
         }
 
         public async Task Logout()
