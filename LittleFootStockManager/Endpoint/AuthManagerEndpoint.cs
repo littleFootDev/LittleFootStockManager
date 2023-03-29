@@ -32,6 +32,11 @@ namespace LittleFootStockManager.Endpoint
                 .Produces(200)
                 .Produces(400)
                 .Produces(500);
+            builder.MapGet("/congirm-email", ConfirmEmail)
+                .WithTags("AccountManagement")
+                .Produces(200)
+                .Produces(400)
+                .Produces(500);
             return builder;
         }
 
@@ -75,6 +80,20 @@ namespace LittleFootStockManager.Endpoint
             {
                 return Results.BadRequest(e.Message);
             }
+        }
+        private static async Task<IResult> ConfirmEmail(
+            [FromServices] IAuthManagerRepository authManager,
+            [FromQuery] string email,
+            [FromQuery] string code
+            )
+        {
+            var confirmationDto = await authManager.ConfirmEmail(email, code);
+
+            if(!confirmationDto.IsSucccesFull)
+            {
+                return Results.BadRequest(confirmationDto);
+            }
+            return Results.Ok(confirmationDto);
         }
     }
 

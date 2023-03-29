@@ -9,6 +9,7 @@ namespace LittleFootStockManager.Contract
         Task<IEnumerable<IdentityError>> Register(UserDto userDto);
         Task<AuthReponseDto> Login(LoginDto loginDto);
         Task Logout();
+        Task<EmailConfirmationDto> ConfirmEmail(string email, string code);
 
     }
 }

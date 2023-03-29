@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Web;
 
 namespace LittleFootStockManager.Repository
 {
@@ -20,9 +21,11 @@ namespace LittleFootStockManager.Repository
         private readonly SignInManager<Users> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IOptions<AdminOptions> _adminOption;
+        private readonly IEmailSender _emailSender;
+        private readonly IHttpContextAccessor _httpContext;
 
         public AuthManagerRepository(IMapper mapper, UserManager<Users> userManager, ILogger<AuthManagerRepository> logger, SignInManager<Users> signInManager, 
-            IConfiguration configuration, IOptions<AdminOptions> adminOption
+            IConfiguration configuration, IOptions<AdminOptions> adminOption, IEmailSender emailSender, IHttpContextAccessor httpContext
             )
         {
             this._mapper = mapper;
@@ -31,19 +34,32 @@ namespace LittleFootStockManager.Repository
             this._signInManager = signInManager;
             this._configuration = configuration;
             this._adminOption = adminOption;
+            this._emailSender = emailSender;
+            this._httpContext = httpContext;
         }
 
         public async Task<IEnumerable<IdentityError>> Register(UserDto userDto)
         {
             var user = _mapper.Map<Users>(userDto);
             user.UserName = userDto.Email;
-            
+            user.EmailConfirmed = userDto.Email == _adminOption.Value.AdminEmail;
             var result = await _userManager.CreateAsync(user, userDto.Password);
             if(result.Succeeded)
             {
                 if (userDto.Email == _adminOption.Value.AdminEmail)
                 {
                     await _userManager.AddToRoleAsync(user, "Admin");
+                    return result.Errors;
+                }
+                else
+                {
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var scheme= _httpContext.HttpContext.Request.Scheme;
+                    var host = _httpContext.HttpContext.Request.Host.ToUriComponent();
+                    var url = $"/Confirm-email?email={userDto.Email}&code={HttpUtility.UrlEncode(code)}";
+                    var confirmUrl = $"{scheme}://{host}{url}";
+
+                    await _emailSender.SendEmail(user.Email, "Confirmez votre email", "Copier-coller ce lien et accédez-y pour valider votre email : " + confirmUrl);
                     return result.Errors;
                 }
             }
@@ -110,6 +126,49 @@ namespace LittleFootStockManager.Repository
         public async Task Logout()
         {
            await _signInManager.SignOutAsync();
+        }
+
+        public async Task<EmailConfirmationDto> ConfirmEmail(string email, string code)
+        {
+            code = HttpUtility.UrlDecode(code);
+            var user = await _userManager.FindByEmailAsync(email);
+            if(user is null)
+            {
+                return new EmailConfirmationDto
+                {
+                    IsSucccesFull = false,
+                    ErrrorMessage = $"User with email {email} not found."
+                };
+            }
+            if(user.EmailConfirmed == false)
+            {
+                var confirmationResult = await _userManager.ConfirmEmailAsync(user, code);
+                if(confirmationResult.Succeeded) 
+                {
+                    await _userManager.AddToRoleAsync(user, "User");
+                    
+                    return new EmailConfirmationDto
+                    {
+                        IsSucccesFull = true,
+                        UserId = user.Id,
+                        Email = email,
+                        ConfirmationDate = DateTime.UtcNow
+                    };
+                }
+                return new EmailConfirmationDto
+                {
+                    IsSucccesFull = false,
+                    ErrrorMessage = $"Unable to confirm email for user {user.Id}"
+                };
+            }
+            else
+            {
+                return new EmailConfirmationDto
+                {
+                    IsSucccesFull = false,
+                    ErrrorMessage = $"Unable to confirm email for user {user.Id}"
+                };
+            }
         }
     }
 }

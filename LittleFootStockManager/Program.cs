@@ -1,7 +1,9 @@
 using LittleFootStockManager.Configuration;
+using LittleFootStockManager.Contract;
 using LittleFootStockManager.Data;
 using LittleFootStockManager.Data.Model;
 using LittleFootStockManager.Endpoint;
+using LittleFootStockManager.Repository;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +41,7 @@ builder.Services.AddDbContext<LittleFootStockManagerDbContext>(options =>
 builder.Services.AddIdentity<Users, IdentityRole>()
     .AddEntityFrameworkStores<LittleFootStockManagerDbContext>()
     .AddDefaultTokenProviders();
+
 RSA _rsa = RSA.Create();
 if (!File.Exists("Key.bin"))
 {
@@ -86,7 +89,9 @@ builder.Services.AddAutoMapper(typeof(MapperConfig));
 
 builder.Services.AddOptions();
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("Administration"));
+builder.Services.Configure<MailOptions>(builder.Configuration.GetSection("Mailjet"));
 
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddAuthManagerService();
 
 var app = builder.Build();
