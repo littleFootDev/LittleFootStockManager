@@ -10,6 +10,7 @@ namespace LittleFootStockManager.Contract
         Task<AuthReponseDto> Login(LoginDto loginDto);
         Task Logout();
         Task<EmailConfirmationDto> ConfirmEmail(string email, string code);
-
+        Task<ForgotPasswordResultDto> ForgotPassword(ForgotPasswordDto forgotPassword);
+        Task<ResetPasswordResultDto> ResetPassword(ResetPasswordDto ResetPasswordDto);
     }
 }

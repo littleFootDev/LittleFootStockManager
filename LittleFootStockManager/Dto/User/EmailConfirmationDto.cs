@@ -6,6 +6,6 @@
         public string Email { get; set; }
         public string UserId { get; set; }
         public DateTime ConfirmationDate { get; set; }
-        public string ErrrorMessage { get; set; }
+        public string ErrorMessage { get; set; }
     }
 }

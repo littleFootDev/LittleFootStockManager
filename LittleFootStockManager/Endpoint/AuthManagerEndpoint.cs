@@ -37,6 +37,16 @@ namespace LittleFootStockManager.Endpoint
                 .Produces(200)
                 .Produces(400)
                 .Produces(500);
+            builder.MapPost("/forgot-password", ForgotPassword)
+                .WithTags("AccountManagement")
+                .Produces(200)
+                .Produces(400)
+                .Produces(500);
+            builder.MapPost("/Reset-password", ResetPassword)
+                .WithTags("AccountManagement")
+                .Produces(200)
+                .Produces(400)
+                .Produces(500);
             return builder;
         }
 
@@ -94,6 +104,30 @@ namespace LittleFootStockManager.Endpoint
                 return Results.BadRequest(confirmationDto);
             }
             return Results.Ok(confirmationDto);
+        }
+        private static async Task<IResult> ForgotPassword(
+            [FromServices] IAuthManagerRepository authManager,
+            ForgotPasswordDto forgotPassword
+            )
+        {
+            var result = await authManager.ForgotPassword(forgotPassword);
+            if(result.IsSuccess)
+            {
+                return Results.Ok(result);
+            }
+            return Results.BadRequest(result);
+        }
+        private static async Task<IResult> ResetPassword(
+            [FromServices] IAuthManagerRepository authManager,
+            ResetPasswordDto resetPassword
+            )
+        {
+            var result = authManager.ResetPassword(resetPassword);
+            if(result.IsCompleted)
+            {
+                return Results.Ok(result);
+            }
+            return Results.BadRequest(result);
         }
     }
 

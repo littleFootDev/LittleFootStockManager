@@ -137,7 +137,7 @@ namespace LittleFootStockManager.Repository
                 return new EmailConfirmationDto
                 {
                     IsSucccesFull = false,
-                    ErrrorMessage = $"User with email {email} not found."
+                    ErrorMessage = $"User with email {email} not found."
                 };
             }
             if(user.EmailConfirmed == false)
@@ -158,7 +158,7 @@ namespace LittleFootStockManager.Repository
                 return new EmailConfirmationDto
                 {
                     IsSucccesFull = false,
-                    ErrrorMessage = $"Unable to confirm email for user {user.Id}"
+                    ErrorMessage = $"Unable to confirm email for user {user.Id}"
                 };
             }
             else
@@ -166,9 +166,66 @@ namespace LittleFootStockManager.Repository
                 return new EmailConfirmationDto
                 {
                     IsSucccesFull = false,
-                    ErrrorMessage = $"Unable to confirm email for user {user.Id}"
+                    ErrorMessage = $"Unable to confirm email for user {user.Id}"
                 };
             }
+        }
+
+        public async Task<ForgotPasswordResultDto> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
+        {
+            var user = await _userManager.FindByEmailAsync(forgotPasswordDto.Email);
+            if (user is null)
+            {
+                return new ForgotPasswordResultDto
+                {
+                  IsSuccess = false,
+                  ErrorMessage = $"User with email {forgotPasswordDto.Email} not found."
+                };
+            }
+            var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+            
+            var scheme = _httpContext.HttpContext.Request.Scheme;
+            var host = _httpContext.HttpContext.Request.Host.ToUriComponent();
+            var url = $"/Confirm-email?email={forgotPasswordDto.Email}&code={HttpUtility.UrlEncode(code)}";
+            var confirmUrl = $"{scheme}://{host}{url}";
+
+            await _emailSender.SendEmail(user.Email, "Reinitialisation de mot de passe", "Copier-coller ce lien pour réinitialiser votre mot de passe : " + confirmUrl);
+
+            return new ForgotPasswordResultDto 
+            { 
+                IsSuccess = true
+            };
+        }
+
+        public async Task<ResetPasswordResultDto> ResetPassword(ResetPasswordDto ResetPasswordDto)
+        {
+            var user = await _userManager.FindByEmailAsync(ResetPasswordDto.Email);
+
+            if (user is null)
+            {
+                return new ResetPasswordResultDto
+                {
+                    IsSuccess = false,
+                    ErrorMessage = $"User with email {ResetPasswordDto.Email} not found."
+                };
+            }
+
+            var code = HttpUtility.UrlDecode(ResetPasswordDto.Code);
+            var resetResult = await _userManager.ResetPasswordAsync(user, code, ResetPasswordDto.Password);
+            if(resetResult.Succeeded)
+            {
+                return new ResetPasswordResultDto 
+                { 
+                    IsSuccess = true,
+                    UserId = user.Id,
+                };
+            }
+
+            return new ResetPasswordResultDto
+            {
+                IsSuccess = false,
+                ErrorMessage = $"Unable to reset passord for user {user.Id}"
+            };
         }
     }
 }
