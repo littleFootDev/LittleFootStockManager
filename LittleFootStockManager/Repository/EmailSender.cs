@@ -1,8 +1,9 @@
 ﻿using LittleFootStockManager.Configuration;
 using LittleFootStockManager.Contract;
+using MailKit.Net.Smtp;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using MailKit.Net.Smtp;
+
 
 namespace LittleFootStockManager.Repository
 {
@@ -30,7 +31,6 @@ namespace LittleFootStockManager.Repository
             await client.AuthenticateAsync(_options.Value.Login, _options.Value.Password);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
-
         }
     }
 }
