@@ -44,7 +44,7 @@ namespace LittleFootStockManager.Repository
             }
 
         }
-        public async Task<bool> CreateRole(RoleDto roleDto)
+        public async Task<RoleDto> CreateRole(RoleDto roleDto)
         {
             try
             {
@@ -58,14 +58,17 @@ namespace LittleFootStockManager.Repository
                     var error = result.Errors.FirstOrDefault()?.Description;
                     throw new Exception($"Failed to create role: {error}");
                 }
-                return true;
+                return new RoleDto
+                {
+                    Name = roleDto.Name,
+                };
             }
             catch (Exception ex)
             {
                 throw new Exception($"An error occurred while creating the role.{ex.Message}");
             }
         }
-        public async Task<bool> DeleteRole(string roleId)
+        public async Task<RoleInfoDto> DeleteRole(string roleId)
         {
             try
             {
@@ -75,10 +78,19 @@ namespace LittleFootStockManager.Repository
                     if (role.Name != "Admin" || role.Name != "User")
                     {
                         var result = await ConfirmeDeleteRole(role);
-                        return true;
+                        return new RoleInfoDto
+                        {
+                            Id = roleId,
+                            Name = role.Name
+                        };
                     }
                 }
-                return false;
+                return new RoleInfoDto
+                {
+                    Name= role.Name,
+                    Id= roleId,
+                    ErrorMessage = "The role could not be deleted!"
+                };
             }
             catch (Exception ex)
             {
@@ -100,7 +112,7 @@ namespace LittleFootStockManager.Repository
                 throw new Exception($"An error occurred while retrieving the roles. {ex.Message}");
             }
         }
-        public async Task<bool> UpdateRole(RoleInfoDto updateRole)
+        public async Task<RoleInfoDto> UpdateRole(RoleInfoDto updateRole)
         {
             try
             {
@@ -116,7 +128,11 @@ namespace LittleFootStockManager.Repository
                     var error = result.Errors.FirstOrDefault()?.Description;
                     throw new Exception($"Failed to update role: {error}");
                 }
-                return true;
+                return new RoleInfoDto
+                {
+                    Name = updateRole.Name,
+                    Id = updateRole.Id,
+                };
             }
             catch (Exception ex)
             {

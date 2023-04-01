@@ -8,9 +8,9 @@ namespace LittleFootStockManager.Contract
     {
         //Roles
         public Task<AdminRolesIndexDto> GetAllRoles();
-        public Task<bool> CreateRole(RoleDto role);
-        public Task<bool> UpdateRole(RoleInfoDto updateRole);
-        public Task<bool> DeleteRole(string roleId);
+        public Task<RoleDto> CreateRole(RoleDto role);
+        public Task<RoleInfoDto> UpdateRole(RoleInfoDto updateRole);
+        public Task<RoleInfoDto> DeleteRole(string roleId);
         public Task<bool> ConfirmeDeleteRole(IdentityRole role);
 
         //User
