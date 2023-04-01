@@ -166,7 +166,7 @@ namespace LittleFootStockManager.Repository
                 return new EmailConfirmationDto
                 {
                     IsSucccesFull = false,
-                    ErrorMessage = $"Unable to confirm email for user {user.Id}"
+                    ErrorMessage = $"Email already confirm for the user : {user.Id}"
                 };
             }
         }

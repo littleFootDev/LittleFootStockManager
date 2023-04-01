@@ -93,6 +93,7 @@ builder.Services.Configure<MailOptions>(builder.Configuration.GetSection("Mailje
 
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddAuthManagerService();
+builder.Services.AddAdminService();
 
 var app = builder.Build();
 
@@ -110,5 +111,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGroup("/auth").MapAuthManagerEndpoint();
+app.MapGroup("/admin").MapAdminEndpoints();
 app.Run();
 
